@@ -53,37 +53,40 @@ ${questionsBlock}`;
       const prefLines: string[] = [];
       if (interviewType) {
         prefLines.push(
-          `- Interview category the user wants: "${interviewType}". They have ALREADY chosen this — do NOT ask them for the interview type again. When calling createInterview, map it to the closest of Behavioral, Technical, Mixed or Leadership.`
+          `- Interview category: "${interviewType}". ALREADY chosen by the user. Map it to the closest createInterview type (Behavioral, Technical, Mixed or Leadership).`
         );
       }
       if (questionPreference) {
         prefLines.push(
-          `- Question focus they want: "${questionPreference}". They have ALREADY stated what they want to be asked about — do NOT ask about it again. It will be used when generating the questions.`
+          `- Question focus: "${questionPreference}". ALREADY stated by the user. The questions will be generated to match it.`
         );
       }
       if (resumeText) {
         // Trim very long resumes so the system prompt stays manageable.
         const resume = resumeText.slice(0, 4000);
         prefLines.push(
-          `- They uploaded their CV/resume (text below). Use it to infer the role, experience level and technologies. Do NOT ask for details the resume already answers, and do NOT read the resume back to them.`
+          `- CV/resume uploaded (text below). Infer the role, experience level and technologies from it. Never read it back to the user.`
         );
         prefLines.push(`<resume>${resume}</resume>`);
       }
 
+      // When preferences exist, every required createInterview field has a
+      // pre-approved default, so the assistant never has to interrogate the
+      // user for "missing" details.
+      const roleDefault = interviewType || "General Practice";
+
       instructions += `
 
-USER ADVANCED PREFERENCES — the user already answered these BEFORE the call started. Treat them as confirmed answers, NOT as topics to ask about:
+USER ADVANCED PREFERENCES — the user filled these in a form BEFORE the call. Every item is a confirmed fact, NOT a conversation topic:
 ${prefLines.join("\n")}
 
-REVISED SETUP PROCEDURE (this OVERRIDES the default collection steps above):
-- NEVER re-ask for a detail the preferences or resume already provide: the interview type and question focus are fixed, and the role, level and techstack come from the resume wherever they are clear from it.
-- Ask ONLY about what remains genuinely unknown — usually just the number of questions, plus the experience level and role ONLY if the resume does not make them clear. Combine everything you still need into ONE short turn.
-- If the preferences and resume already determine everything except the amount, ask only for the amount (or default it to 5 if the user says they do not care).
-- If literally everything is already determined, confirm the setup in ONE sentence and IMMEDIATELY call createInterview — no further questions.
-- When calling createInterview: derive the type from the interview-category preference, the role and techstack from the resume where possible, and the amount from the user's answer (default 5).
-- Keep it brief: one short acknowledgment of what they set up, then only the still-missing questions.
-
-Begin the conversation with a SHORT personalized greeting that acknowledges what they set up (for example, the interview category they chose) — do NOT open with the generic role question when the role is already clear from their preferences or resume. Then ask ONLY for the still-missing details.`;
+REVISED SETUP PROCEDURE — this OVERRIDES the numbered collection steps above:
+1. Do NOT ask the user for the role, experience level, interview type, techstack or question focus. Asking for any of these is a FAILURE — they were already answered in the form.
+2. Open with ONE short, warm greeting that proves you understood their setup, e.g. "Hi! I'm Nexa — a ${interviewType || "tailored"} interview with the kind of questions you asked for is ready to set up."
+3. You may ask AT MOST ONE short confirmation question such as "Shall we start with about 5 questions?" — nothing else. If the user's reply requests a small change, incorporate it.
+4. Defaults are PRE-APPROVED, so never wait for information you were not given: role = "${roleDefault}" (or the role their resume points to), level = "Mid", amount = 5, techstack = [] unless known. The createInterview role parameter accepts any descriptive string — the default is always acceptable.
+5. The instant the user confirms (or asks for a change), call createInterview IMMEDIATELY with the preference-derived type, the role from step 4, level "Mid" unless stated, and the agreed amount (default 5). Then tell them the interview is ready and you are taking them to it.
+6. Speak at most three short sentences in total before the interview is created.`;
 
       // The generic hardcoded first message is intentionally NOT appended when
       // preferences exist; the model greets based on the guidance above.
@@ -108,7 +111,8 @@ const CREATE_INTERVIEW_PARAMS = {
   properties: {
     role: {
       type: "string",
-      description: "The job role, e.g. Frontend Developer",
+      description:
+        "The job role or interview focus, e.g. Frontend Developer or HR Round. Any descriptive string is acceptable — a pre-set preference or sensible default is fine.",
     },
     level: {
       type: "string",
@@ -134,7 +138,7 @@ const CREATE_INTERVIEW_PARAMS = {
 const CREATE_INTERVIEW_DECL: GeminiFunctionDeclaration = {
   name: "createInterview",
   description:
-    "Create the mock interview once all details have been collected from the user.",
+    "Create the mock interview. Call this as soon as the details are known — they may come from the user's pre-set preferences, a resume, sensible defaults, or the conversation. Do not wait to collect details that are already known.",
   parameters: CREATE_INTERVIEW_PARAMS as unknown as Record<string, unknown>,
 };
 
