@@ -45,38 +45,49 @@ ${questionsBlock}`;
   // Advanced preferences (generate flow only). Strictly additive: when all
   // fields are empty this block is omitted entirely so behaviour is unchanged.
   if (type === "generate" && preferences) {
-    const hasAny =
-      preferences.interviewType?.trim() ||
-      preferences.questionPreference?.trim() ||
-      preferences.resumeText?.trim();
+    const interviewType = preferences.interviewType?.trim() ?? "";
+    const questionPreference = preferences.questionPreference?.trim() ?? "";
+    const resumeText = preferences.resumeText?.trim() ?? "";
 
-    if (hasAny) {
-      const lines: string[] = [];
-      lines.push("");
-      lines.push("USER ADVANCED PREFERENCES (set before the call started):");
-      if (preferences.interviewType?.trim()) {
-        lines.push(
-          `- Interview category the user wants: "${preferences.interviewType.trim()}".`
+    if (interviewType || questionPreference || resumeText) {
+      const prefLines: string[] = [];
+      if (interviewType) {
+        prefLines.push(
+          `- Interview category the user wants: "${interviewType}". They have ALREADY chosen this — do NOT ask them for the interview type again. When calling createInterview, map it to the closest of Behavioral, Technical, Mixed or Leadership.`
         );
       }
-      if (preferences.questionPreference?.trim()) {
-        lines.push(
-          `- Question preference: "${preferences.questionPreference.trim()}". Lean the generated questions towards this.`
+      if (questionPreference) {
+        prefLines.push(
+          `- Question focus they want: "${questionPreference}". They have ALREADY stated what they want to be asked about — do NOT ask about it again. It will be used when generating the questions.`
         );
       }
-      if (preferences.resumeText?.trim()) {
+      if (resumeText) {
         // Trim very long resumes so the system prompt stays manageable.
-        const resume = preferences.resumeText.trim().slice(0, 4000);
-        lines.push(
-          `- The user provided their CV/resume text. Use it to personalize the questions (e.g. ask about projects, skills, or experience mentioned in it). Resume excerpt follows between <resume> tags:`
+        const resume = resumeText.slice(0, 4000);
+        prefLines.push(
+          `- They uploaded their CV/resume (text below). Use it to infer the role, experience level and technologies. Do NOT ask for details the resume already answers, and do NOT read the resume back to them.`
         );
-        lines.push(`<resume>${resume}</resume>`);
+        prefLines.push(`<resume>${resume}</resume>`);
       }
-      lines.push(
-        "Keep these preferences in mind while collecting details and when choosing the role/type/techstack. Do NOT read the resume back to the user."
-      );
 
-      instructions += lines.join("\n");
+      instructions += `
+
+USER ADVANCED PREFERENCES — the user already answered these BEFORE the call started. Treat them as confirmed answers, NOT as topics to ask about:
+${prefLines.join("\n")}
+
+REVISED SETUP PROCEDURE (this OVERRIDES the default collection steps above):
+- NEVER re-ask for a detail the preferences or resume already provide: the interview type and question focus are fixed, and the role, level and techstack come from the resume wherever they are clear from it.
+- Ask ONLY about what remains genuinely unknown — usually just the number of questions, plus the experience level and role ONLY if the resume does not make them clear. Combine everything you still need into ONE short turn.
+- If the preferences and resume already determine everything except the amount, ask only for the amount (or default it to 5 if the user says they do not care).
+- If literally everything is already determined, confirm the setup in ONE sentence and IMMEDIATELY call createInterview — no further questions.
+- When calling createInterview: derive the type from the interview-category preference, the role and techstack from the resume where possible, and the amount from the user's answer (default 5).
+- Keep it brief: one short acknowledgment of what they set up, then only the still-missing questions.
+
+Begin the conversation with a SHORT personalized greeting that acknowledges what they set up (for example, the interview category they chose) — do NOT open with the generic role question when the role is already clear from their preferences or resume. Then ask ONLY for the still-missing details.`;
+
+      // The generic hardcoded first message is intentionally NOT appended when
+      // preferences exist; the model greets based on the guidance above.
+      return instructions;
     }
   }
 
