@@ -30,7 +30,8 @@ export async function POST(request: Request) {
       return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { role, level, type, techstack, amount } = await request.json();
+    const { role, level, type, techstack, amount, preferences } =
+      await request.json();
 
     if (!role || !level || !type) {
       return Response.json(
@@ -44,6 +45,43 @@ export async function POST(request: Request) {
       ? techstack.join(", ")
       : String(techstack || "");
 
+    // Advanced preferences (optional, generate flow only). Strictly additive.
+    const interviewTypePref =
+      typeof preferences?.interviewType === "string"
+        ? preferences.interviewType.trim()
+        : "";
+    const questionPref =
+      typeof preferences?.questionPreference === "string"
+        ? preferences.questionPreference.trim()
+        : "";
+    const resumeText =
+      typeof preferences?.resumeText === "string"
+        ? preferences.resumeText.trim().slice(0, 4000)
+        : "";
+
+    // Build optional preference lines so the base prompt is untouched when
+    // the user left everything blank.
+    const preferenceLines: string[] = [];
+    if (interviewTypePref) {
+      preferenceLines.push(
+        `The user specifically requested this interview category: ${interviewTypePref}. Match the questions to it.`
+      );
+    }
+    if (questionPref) {
+      preferenceLines.push(
+        `The user's question preference: ${questionPref}. Lean the questions towards this.`
+      );
+    }
+    if (resumeText) {
+      preferenceLines.push(
+        `The user provided their CV/resume. Personalize the questions using the projects, skills, and experience mentioned in it. Do NOT quote the resume back. Resume text follows between <resume> tags:`
+      );
+      preferenceLines.push(`<resume>${resumeText}</resume>`);
+    }
+    const preferenceBlock = preferenceLines.length
+      ? preferenceLines.join("\n          ")
+      : "";
+
     let questions: string[] = [];
 
     try {
@@ -55,6 +93,7 @@ export async function POST(request: Request) {
           The tech stack used in the job is: ${techstackString}.
           The focus between behavioural and technical questions should lean towards: ${type}.
           The amount of questions required is: ${questionCount}.
+          ${preferenceBlock}
           Please return only the questions, without any additional text.
           The questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
           Return the questions formatted like this:

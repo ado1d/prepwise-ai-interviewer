@@ -42,6 +42,8 @@ const Agent = ({
   feedbackId,
   type,
   questions,
+  preferences,
+  onCallStateChange,
 }: AgentProps) => {
   const router = useRouter();
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
@@ -62,6 +64,15 @@ const Agent = ({
   useEffect(() => {
     callStatusRef.current = callStatus;
   }, [callStatus]);
+
+  // Notify the parent (InterviewGenerator) when the call is active so it can
+  // lock the advanced-preferences form. No-op for the interview flow.
+  useEffect(() => {
+    const active =
+      callStatus === CallStatus.CONNECTING ||
+      callStatus === CallStatus.ACTIVE;
+    onCallStateChange?.(active);
+  }, [callStatus, onCallStateChange]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -129,6 +140,9 @@ const Agent = ({
             ? parsed.techstack.join(", ")
             : parsed.techstack,
           amount: parsed.amount,
+          // Advanced preferences (generate flow only). Forwarded so question
+          // generation can be personalized. Empty/undefined = unchanged behaviour.
+          preferences: type === "generate" ? preferences : undefined,
         }),
       });
 
@@ -173,7 +187,14 @@ const Agent = ({
       const sessionResponse = await fetch("/api/realtime-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, questions, provider }),
+        body: JSON.stringify({
+          type,
+          questions,
+          provider,
+          // Advanced preferences (generate flow only). The server injects these
+          // into the interview-designer system instructions.
+          preferences: type === "generate" ? preferences : undefined,
+        }),
       });
 
       if (!sessionResponse.ok) {

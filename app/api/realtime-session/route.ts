@@ -24,7 +24,8 @@ interface AssistantConfig {
 function buildInstructions(
   config: AssistantConfig,
   type: SessionType,
-  questions: string[]
+  questions: string[],
+  preferences?: InterviewPreferences
 ): string {
   let instructions = config.systemPrompt;
 
@@ -39,6 +40,44 @@ function buildInstructions(
 
 QUESTIONS FOR THIS INTERVIEW (ask them one at a time, in this order):
 ${questionsBlock}`;
+  }
+
+  // Advanced preferences (generate flow only). Strictly additive: when all
+  // fields are empty this block is omitted entirely so behaviour is unchanged.
+  if (type === "generate" && preferences) {
+    const hasAny =
+      preferences.interviewType?.trim() ||
+      preferences.questionPreference?.trim() ||
+      preferences.resumeText?.trim();
+
+    if (hasAny) {
+      const lines: string[] = [];
+      lines.push("");
+      lines.push("USER ADVANCED PREFERENCES (set before the call started):");
+      if (preferences.interviewType?.trim()) {
+        lines.push(
+          `- Interview category the user wants: "${preferences.interviewType.trim()}".`
+        );
+      }
+      if (preferences.questionPreference?.trim()) {
+        lines.push(
+          `- Question preference: "${preferences.questionPreference.trim()}". Lean the generated questions towards this.`
+        );
+      }
+      if (preferences.resumeText?.trim()) {
+        // Trim very long resumes so the system prompt stays manageable.
+        const resume = preferences.resumeText.trim().slice(0, 4000);
+        lines.push(
+          `- The user provided their CV/resume text. Use it to personalize the questions (e.g. ask about projects, skills, or experience mentioned in it). Resume excerpt follows between <resume> tags:`
+        );
+        lines.push(`<resume>${resume}</resume>`);
+      }
+      lines.push(
+        "Keep these preferences in mind while collecting details and when choosing the role/type/techstack. Do NOT read the resume back to the user."
+      );
+
+      instructions += lines.join("\n");
+    }
   }
 
   instructions += `
@@ -117,7 +156,23 @@ export async function POST(request: Request) {
     const isGenerate = type === "generate";
     const config: AssistantConfig = isGenerate ? interviewDesigner : interviewer;
 
-    const instructions = buildInstructions(config, type, questions);
+    // Advanced preferences (generate flow only). Coerce to a safe shape; an
+    // empty/absent object leaves the instructions untouched.
+    const preferences: InterviewPreferences | undefined = isGenerate
+      ? {
+          interviewType: typeof body.preferences?.interviewType === "string" ? body.preferences.interviewType : undefined,
+          questionPreference:
+            typeof body.preferences?.questionPreference === "string"
+              ? body.preferences.questionPreference
+              : undefined,
+          resumeText:
+            typeof body.preferences?.resumeText === "string"
+              ? body.preferences.resumeText
+              : undefined,
+        }
+      : undefined;
+
+    const instructions = buildInstructions(config, type, questions, preferences);
 
     if (provider === "gemini") {
       // The browser auto-detects a Live-capable model (models.list does not

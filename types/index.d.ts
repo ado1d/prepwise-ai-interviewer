@@ -54,6 +54,26 @@ interface AgentProps {
   feedbackId?: string;
   type: "generate" | "interview";
   questions?: string[];
+  /**
+   * Advanced preferences collected before the call (generate flow only).
+   * Forwarded to /api/realtime-session (system instructions) and to
+   * /api/interviews (question generation). Ignored for type="interview".
+   */
+  preferences?: InterviewPreferences;
+  /**
+   * Notified when the call transitions to/from an active state so the parent
+   * can lock any preference inputs. Optional; only used by the generate flow.
+   */
+  onCallStateChange?: (active: boolean) => void;
+}
+
+interface InterviewPreferences {
+  /** Free-text interview category, e.g. "Technical round", "HR screening". */
+  interviewType?: string;
+  /** Free-text description of the kinds of questions the user wants. */
+  questionPreference?: string;
+  /** Optional pasted/uploaded CV or resume text for personalization. */
+  resumeText?: string;
 }
 
 interface RouteParams {
