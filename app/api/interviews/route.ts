@@ -5,6 +5,11 @@ import { db } from "@/firebase/admin";
 import { getCurrentUser } from "@/lib/actions/auth.action";
 import { getRandomInterviewCover } from "@/lib/utils";
 
+// Text model used for question generation. Override with any chat model your
+// OpenAI account supports via OPENAI_TEXT_MODEL (e.g. gpt-4o, gpt-5-mini,
+// gpt-5.6-mini). Default: gpt-4o-mini.
+const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini";
+
 // Used if question generation fails, so the user is never blocked.
 const fallbackQuestions = [
   "Could you tell me a bit about yourself and your background?",
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
 
     try {
       const { text } = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: openai(TEXT_MODEL),
         prompt: `Prepare questions for a job interview.
           The job role is ${role}.
           The job experience level is ${level}.

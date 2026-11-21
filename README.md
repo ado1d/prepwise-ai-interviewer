@@ -12,10 +12,10 @@
     <img src="https://img.shields.io/badge/-Firebase-black?style=for-the-badge&logoColor=white&logo=firebase&color=DD2C00" alt="firebase" />
   </div>
 
-  <h3 align="center">Prepwise: A job interview preparation platform powered by the OpenAI Realtime API</h3>
+  <h3 align="center">Prepwise: A job interview preparation platform with switchable realtime voice providers</h3>
 
    <div align="center">
-     <b>This fork replaces Vapi + Google Gemini with the OpenAI Realtime API and gpt-4o-mini.</b> See <a href="./README-OPTION2.md"><b>README-OPTION2.md</b></a> for setup.
+     <b>This fork runs the voice interview on either <b>OpenAI Realtime API</b> (gpt-realtime-2.1-mini) or <b>Google Gemini Live API</b> (free tier) — switchable on the call screen. Questions &amp; feedback use gpt-4o-mini.</b> See <a href="./README-OPTION2.md"><b>README-OPTION2.md</b></a> for full setup.
     </div>
 
    <div align="center">
@@ -43,7 +43,7 @@ If you prefer visual learning, this is the perfect resource for you. Follow our 
 
 ## <a name="introduction">🤖 Introduction</a>
 
-Built with Next.js for the user interface and backend logic, Firebase for authentication and data storage, styled with TailwindCSS and using the OpenAI Realtime API (WebRTC) for the voice agents, Prepwise is a website project designed to help you learn integrating AI models with your apps. The platform offers a sleek and modern experience for job interview preparation.
+Built with Next.js for the user interface and backend logic, Firebase for authentication and data storage, styled with TailwindCSS and using **either the OpenAI Realtime API (WebRTC) or Google Gemini Live API (WebSocket, free tier)** for the voice agents — switchable per call — Prepwise is a website project designed to help you learn integrating AI models with your apps. The platform offers a sleek and modern experience for job interview preparation.
 
 If you're getting started and need assistance or face any bugs, join our active Discord community with over **50k+** members. It's a place where people help each other out.
 
@@ -54,16 +54,16 @@ If you're getting started and need assistance or face any bugs, join our active 
 - Next.js
 - Firebase
 - Tailwind CSS
-- OpenAI Realtime API (WebRTC voice)
+- OpenAI Realtime API (WebRTC voice), Google Gemini Live API (WebSocket voice, free tier), **and/or** Groq Voice (free, region-agnostic pipeline) — switchable per call
 - shadcn/ui
-- OpenAI gpt-4o-mini
+- OpenAI gpt-4o-mini (questions + feedback)
 - Zod
 
 ## <a name="features">🔋 Features</a>
 
 👉 **Authentication**: Sign Up and Sign In using password/email authentication handled by Firebase.
 
-👉 **Create Interviews**: Easily generate job interviews by talking to an AI voice assistant (OpenAI Realtime + gpt-4o-mini).
+👉 **Create Interviews**: Easily generate job interviews by talking to an AI voice assistant (OpenAI Realtime or Gemini Live + gpt-4o-mini).
 
 👉 **Get feedback from AI**: Take the interview with AI voice agent, and receive instant feedback based on your conversation.
 
@@ -109,10 +109,27 @@ npm install
 Create a new file named `.env.local` in the root of your project and add the following content:
 
 ```env
-# OpenAI — https://platform.openai.com/api-keys
+# Default voice provider: openai | gemini (still switchable on the call screen)
+NEXT_PUBLIC_VOICE_PROVIDER=openai
+
+# OpenAI (required if using OpenAI Realtime) — https://platform.openai.com/api-keys
 OPENAI_API_KEY=
 # Optional: override the Realtime model (default: gpt-realtime-2.1-mini)
 # OPENAI_REALTIME_MODEL=
+# Text model for questions + feedback (ANY chat model your key supports:
+# default gpt-4o-mini; e.g. gpt-4o, gpt-5-mini, gpt-5.6-mini)
+OPENAI_TEXT_MODEL=gpt-4o-mini
+
+# Gemini (required if using Gemini Live) — https://aistudio.google.com/apikey (free)
+NEXT_PUBLIC_GEMINI_API_KEY=
+# Optional: override the Live model (default: models/gemini-2.0-flash-live-001)
+# NEXT_PUBLIC_GEMINI_LIVE_MODEL=
+
+# Groq (required if using Groq Voice) — https://console.groq.com/keys (free, region-agnostic)
+# Stays server-side. Turn-based pipeline: Whisper STT + Llama LLM + browser TTS.
+GROQ_API_KEY=
+# GROQ_LLM_MODEL=llama-3.3-70b-versatile
+# GROQ_STT_MODEL=whisper-large-v3
 
 NEXT_PUBLIC_FIREBASE_API_KEY=
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=

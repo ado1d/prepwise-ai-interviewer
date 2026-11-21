@@ -102,7 +102,12 @@ export const mappings = {
 // starts a mock interview (type="interview").
 export const interviewer = {
   name: "Nexa",
+  // OpenAI Realtime voice name.
   voice: "sage",
+  // Gemini Live prebuilt voice name (alternatives: Puck, Charon, Fenrir,
+  // Kore, Aoede, Leda, Orus, Zephyr). If the selected model rejects the
+  // voice, the session automatically retries with the model's default.
+  geminiVoice: "Aoede",
   firstMessage:
     "Hello! Thank you for taking the time to speak with me today. I'm excited to learn more about you and your experience.",
   systemPrompt: `You are a professional job interviewer conducting a real-time voice interview with a candidate. Your goal is to assess their qualifications, motivation, and fit for the role.
@@ -132,6 +137,7 @@ Ending the interview:
 export const interviewDesigner = {
   name: "Nexa",
   voice: "sage",
+  geminiVoice: "Puck",
   firstMessage:
     "Hi! I'm Nexa. I can set up a personalized mock interview for you. What role would you like to practice for?",
   systemPrompt: `You are Nexa, a helpful voice assistant that sets up AI mock interviews. Your job is to collect the following details from the user in a SHORT, friendly voice conversation:

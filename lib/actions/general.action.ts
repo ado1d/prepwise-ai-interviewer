@@ -6,6 +6,12 @@ import { openai } from "@ai-sdk/openai";
 import { db } from "@/firebase/admin";
 import { feedbackSchema } from "@/constants";
 
+// Text model used for interview feedback analysis. Override with any chat
+// model your OpenAI account supports via OPENAI_TEXT_MODEL (e.g. gpt-4o,
+// gpt-5-mini, gpt-5.6-mini). Default: gpt-4o-mini. Kept in sync with the
+// question-generation route so both text tasks use the same model.
+const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini";
+
 export async function createFeedback(params: CreateFeedbackParams) {
   const { interviewId, userId, transcript, feedbackId } = params;
 
@@ -18,7 +24,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
       .join("");
 
     const { object } = await generateObject({
-      model: openai("gpt-4o-mini"),
+      model: openai(TEXT_MODEL),
       schema: feedbackSchema,
       prompt: `
         You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.
